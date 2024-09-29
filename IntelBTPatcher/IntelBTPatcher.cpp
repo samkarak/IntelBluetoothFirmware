@@ -131,7 +131,7 @@ void CIntelBTPatcher::processKext(KernelPatcher &patcher, size_t index, mach_vm_
                 patcher.clearError();
             }
 
-            KernelPatcher::RouteRequest asyncIORequest {
+#if 0 //KernelPatcher::RouteRequest asyncIORequest {
             "__ZN13IOUSBHostPipe2ioEP18IOMemoryDescriptorjP19IOUSBHostCompletionj",
                 newAsyncIO,
                 oldAsyncIO
@@ -143,8 +143,10 @@ void CIntelBTPatcher::processKext(KernelPatcher &patcher, size_t index, mach_vm_
                 SYSLOG(DRV_NAME, "failed to resolve %s, error = %d", asyncIORequest.symbol, patcher.getError());
                 patcher.clearError();
             }
+#endif
 
-#if 0 //KernelPatcher::RouteRequest initPipeRequest {
+
+            KernelPatcher::RouteRequest initPipeRequest {
             "__ZN13IOUSBHostPipe28initWithDescriptorsAndOwnersEPKN11StandardUSB18EndpointDescriptorEPKNS0_37SuperSpeedEndpointCompanionDescriptorEP22AppleUSBHostControllerP15IOUSBHostDeviceP18IOUSBHostInterfaceht",
                 newInitPipe,
                 oldInitPipe
@@ -156,7 +158,6 @@ void CIntelBTPatcher::processKext(KernelPatcher &patcher, size_t index, mach_vm_
                 SYSLOG(DRV_NAME, "failed to resolve %s, error = %d", initPipeRequest.symbol, patcher.getError());
                 patcher.clearError();
             }
-#endif
         }
     }
 }
