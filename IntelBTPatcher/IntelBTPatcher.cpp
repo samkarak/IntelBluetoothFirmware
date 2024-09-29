@@ -213,10 +213,9 @@ IOReturn CIntelBTPatcher::newHostDeviceRequest(void *that, IOService *provider, 
                 length = 9;
                 if (writeHCIDescriptor == nullptr)
                     writeHCIDescriptor = IOBufferMemoryDescriptor::withBytes(randomAddressHci, 9, kIODirectionOut);
-                if (getKernelVersion() < KernelVersion::Sequoia || writeHCIDescriptor->prepare(kIODirectionOut));
+                writeHCIDescriptor->prepare(kIODirectionOut);
                 IOReturn ret = FunctionCast(newHostDeviceRequest, callbackIBTPatcher->oldHostDeviceRequest)(that, provider, randomAddressRequest, nullptr, writeHCIDescriptor, length, nullptr, timeout);
-                if (getKernelVersion() >= KernelVersion::Sequoia)
-                    writeHCIDescriptor->complete();
+                writeHCIDescriptor->complete();
                 const char *randAddressDump = _hexDumpHCIData((uint8_t *)randomAddressHci, 9);
                 if (randAddressDump) {
                     SYSLOG(DRV_NAME, "[PATCH] Sending Random Address HCI %d %s", ret, randAddressDump);
