@@ -265,23 +265,23 @@ static void asyncIOCompletion(void* owner, void* parameter, IOReturn status, uin
 
     if (dataBuffer && bytesTransferred) {
         void *buffer = IOMalloc(bytesTransferred);
-        if (getKernelVersion() >= KernelVersion::Sequoia && !dataBuffer->prepare(kIODirectionOut)) return;
-        dataBuffer->readBytes(0, buffer, bytesTransferred);
-        HciEventHdr *hdr = (HciEventHdr *)buffer;
-        if (hdr->evt == HCI_EVT_LE_META && hdr->data[0] == HCI_EVT_LE_META_READ_REMOTE_FEATURES_COMPLETE) {
-            if (skipExtraReadRemoteFeaturesComplete) {
-                skipExtraReadRemoteFeaturesComplete = false;
-            } else {
-                // Copy Connection Handle
-                fakePhyUpdateCompleteEvent[4] = hdr->data[2];
-                fakePhyUpdateCompleteEvent[5] = hdr->data[3];
-                dataBuffer->writeBytes(0, fakePhyUpdateCompleteEvent, 8);
-                skipExtraReadRemoteFeaturesComplete = true;
-                remoteReadSCount--;
+        if (dataBuffer->getLength() > 0 && (getKernelVersion() < KernelVersion::Sequoia || !dataBuffer->prepare(kIODirectionOut))) {
+            dataBuffer->readBytes(0, buffer, bytesTransferred);
+            HciEventHdr *hdr = (HciEventHdr *)buffer;
+            if (hdr->evt == HCI_EVT_LE_META && hdr->data[0] == HCI_EVT_LE_META_READ_REMOTE_FEATURES_COMPLETE) {
+                if (skipExtraReadRemoteFeaturesComplete) skipExtraReadRemoteFeaturesComplete = false;
+                else {
+                    // Copy Connection Handle
+                    fakePhyUpdateCompleteEvent[4] = hdr->data[2];
+                    fakePhyUpdateCompleteEvent[5] = hdr->data[3];
+                    dataBuffer->writeBytes(0, fakePhyUpdateCompleteEvent, 8);
+                    skipExtraReadRemoteFeaturesComplete = true;
+                    remoteReadSCount--;
+                }
             }
+            IOFree(buffer, bytesTransferred);
+            if (getKernelVersion() >= KernelVersion::Sequoia) dataBuffer->complete(kIODirectionOut);
         }
-        IOFree(buffer, bytesTransferred);
-        if (getKernelVersion() >= KernelVersion::Sequoia) dataBuffer->complete(kIODirectionOut);
     }
     if (asyncOwner->action)
         asyncOwner->action(asyncOwner->owner, parameter, status, bytesTransferred);
