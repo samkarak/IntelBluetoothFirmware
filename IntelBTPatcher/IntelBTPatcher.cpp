@@ -67,7 +67,6 @@ static KernelPatcher::KextInfo IntelBTPatcher_IOUsbHostInfo {
 };
 
 void *CIntelBTPatcher::_hookPipeInstance = nullptr;
-AsyncOwnerData *CIntelBTPatcher::_interruptPipeAsyncOwner = nullptr;
 bool CIntelBTPatcher::_randomAddressInit = false;
 
 bool CIntelBTPatcher::init()
