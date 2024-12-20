@@ -265,7 +265,7 @@ static void asyncIOCompletion(void* owner, void* parameter, IOReturn status, uin
 
     if (dataBuffer && bytesTransferred) {
         void *buffer = IOMalloc(bytesTransferred);
-        if (getKernelVersion() >= KernelVersion::Sequoia) dataBuffer->prepare(kIODirectionInOut);
+        if (getKernelVersion() >= KernelVersion::Sequoia && !dataBuffer->prepare(kIODirectionOut)) return;
         dataBuffer->readBytes(0, buffer, bytesTransferred);
         HciEventHdr *hdr = (HciEventHdr *)buffer;
         if (hdr->evt == HCI_EVT_LE_META && hdr->data[0] == HCI_EVT_LE_META_READ_REMOTE_FEATURES_COMPLETE) {
@@ -277,11 +277,11 @@ static void asyncIOCompletion(void* owner, void* parameter, IOReturn status, uin
                 fakePhyUpdateCompleteEvent[5] = hdr->data[3];
                 dataBuffer->writeBytes(0, fakePhyUpdateCompleteEvent, 8);
                 skipExtraReadRemoteFeaturesComplete = true;
-                remoteReadSCount++;
+                remoteReadSCount--;
             }
         }
         IOFree(buffer, bytesTransferred);
-        if (getKernelVersion() >= KernelVersion::Sequoia) dataBuffer->complete(kIODirectionInOut);
+        if (getKernelVersion() >= KernelVersion::Sequoia) dataBuffer->complete(kIODirectionOut);
     }
     if (asyncOwner->action)
         asyncOwner->action(asyncOwner->owner, parameter, status, bytesTransferred);
@@ -292,12 +292,12 @@ IOReturn CIntelBTPatcher::
 newAsyncIO(void *that, IOMemoryDescriptor* dataBuffer, uint32_t bytesTransferred, IOUSBHostCompletion* completion, uint32_t completionTimeoutMs)
 {
     if (remoteReadSCount > 0 && that == _hookPipeInstance && completion) {
-        AsyncOwnerData *_interruptPipeAsyncOwner = new AsyncOwnerData;
-        _interruptPipeAsyncOwner->action = completion->action;
-        _interruptPipeAsyncOwner->owner = completion->owner;
-        _interruptPipeAsyncOwner->dataBuffer = dataBuffer;
+        AsyncOwnerData *ownerData = new AsyncOwnerData;
+        ownerData->action = completion->action;
+        ownerData->owner = completion->owner;
+        ownerData->dataBuffer = dataBuffer;
         completion->action = asyncIOCompletion;
-        completion->owner = _interruptPipeAsyncOwner;
+        completion->owner = ownerData;
     }
     return FunctionCast(newAsyncIO, callbackIBTPatcher->oldAsyncIO)(that, dataBuffer, bytesTransferred, completion, completionTimeoutMs);
 }
